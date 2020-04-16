@@ -1,0 +1,275 @@
+import ddf.minim.*;
+PowerUp powerup;
+Pinguin thePinguin;
+Obstacles ship;
+Obstacles ice;
+ScoreScreen score;
+Encounter encounter;
+GameState GameStateManager;
+
+ScoreSave save;
+DeveloperTools tools;
+Bullet[] bullets;
+Menu menu;
+Snow snow;
+
+int index;
+
+//point pickup
+int scoreForPoint = 15;
+int pickupScore;
+int seconde = 60;
+int pointcountdown;
+float scoreHeightAlt;
+boolean isCollected = false;
+float pointX;
+
+PFont font;
+Level l1;
+int lifecounter;
+Minim minim;
+AudioPlayer song, damage, point, selectSound;
+Timer startTimer;
+boolean isNotDead = false;
+
+float //Ship spawn values
+  shipHeight, 
+  shipWidth, 
+  shipSpawnTime;
+String shipType;
+
+float //Ship spawn values
+  iceHeight, 
+  iceWidth, 
+  iceSpawnTime;
+String iceType;
+
+//Pinguin sprites
+int 
+  framesPinguin = 18, 
+  pinguinFrame = 0;
+
+PImage[] pinguinSprite = new PImage[framesPinguin];
+
+void setup() {
+  //============================================
+
+  fullScreen();
+  //size(1280, 720);
+  minim = new Minim(this); //define minim so we have background music in the menu
+  song = minim.loadFile("./sounds/background_music.wav");
+  song.setGain(-40.0); //set volume a bit lower, needs to be handled by controls in menu later.
+  song.play();
+  song.loop(); //loop the background music.
+  
+  //Initializing gameStateManager and setting gamestate to 0 (menu).
+  GameStateManager = new GameState();
+  GameStateManager.changeGameState(0);
+}
+
+//===============================================
+
+
+
+void initMenuElements() {
+  thePinguin = new Pinguin(50, 50);
+  for (int i = 0; i<framesPinguin; i++) {
+    pinguinSprite[i] = loadImage("./Images/Pinguin/pinguin-"+i+".png");
+  }
+
+  menu = new Menu();
+  menu.init();
+}
+
+//===============================================
+
+void initPlayElements() {
+  lifecounter=1;
+  index = 0;
+
+  //INIT CLASSSES.
+  thePinguin = new Pinguin(50, 50);
+  tools = new DeveloperTools();
+  powerup = new PowerUp();
+  bullets = new Bullet[6];
+  ice = new Obstacles();
+  ship = new Obstacles();
+  snow = new Snow();
+
+  //initialize pinguin
+  thePinguin.initPingFrames();
+  
+  //Spawn values
+  shipHeight = 100;
+  shipWidth = 260;
+  shipSpawnTime = 5;
+  shipType = "Ship";
+
+  iceHeight = 100;
+  iceWidth = 100;
+  iceSpawnTime = 3;
+  iceType = "Ice";
+
+  //audio
+  startTimer = new Timer(500);//store the current time in frames
+  damage = minim.loadFile("./sounds/damage.wav");
+  point = minim.loadFile("./sounds/coin.wav");
+  point.setGain(-20);
+}
+
+//===============================================
+
+void draw() {
+  GameStateManager.UpdateGameState();
+}
+
+//===============================================
+
+void playDrawElements() {
+  if (!isNotDead) {
+
+    l1.draw();
+    fill(0, 255, 0);
+
+    ship.draw();
+    ice.draw();
+    tools.draw();
+
+    fill(255, 0, 0);
+    encounter.draw();
+
+
+    for (int i=0; i<bullets.length; i++) {
+      bullets[i].update();
+      bullets[i].draw();
+    }
+
+    powerup.draw();
+
+    fill(255, 0, 0);
+
+    for (int i = 0; i < encounter.maxEnemies; i++) {
+      if (encounter.collidesWithEnemy(thePinguin, encounter.enemy[i] ) || 
+        ice.collides(thePinguin) || ship.collides(thePinguin)) {
+
+        damage.play();
+        damage.rewind();
+        lifecounter--; // a live will be taken
+        if (lifecounter == 0)
+        {
+          GameStateManager.changeGameState(4);
+          isNotDead = true;
+        } else if (lifecounter <= powerup.shieldLife && lifecounter > powerup.shootLife)//no damagesound is heard when you collide with the enemy and have a shield powerup & will activate the shield timer.
+        {
+          damage.pause();
+          powerup.startTime = true;
+        }
+      }
+    } 
+
+    // geef punten als de speler tegen punten aan komt
+    if (encounter.collidesWithPoint(thePinguin)) {
+      point.play();
+      point.rewind();
+      if(pointcountdown > 0) {
+        pickupScore += scoreForPoint;
+      } else {
+        pickupScore = scoreForPoint;
+      }
+      score.score += scoreForPoint;
+      pointcountdown = seconde * 1;
+      scoreHeightAlt = thePinguin.position.y - 20;
+      pointX = thePinguin.position.x;
+    }
+
+    if (pointcountdown > 0) { 
+      //haalt score eraf 
+      pointcountdown -= 1;
+      textSize(23);
+      fill(255, 255, 255);
+      text("+" + pickupScore, pointX, scoreHeightAlt);
+      scoreHeightAlt -= 1;
+    }
+
+    score.draw();
+    thePinguin.update();
+    thePinguin.draw();
+
+
+    //text(frameRate, width/2, 100); fps checken
+  } else {
+  }
+}
+
+//===============RESET FUNCTION====================
+
+void resetGame() {
+  isNotDead = false;
+  score = new ScoreScreen();
+  save = new ScoreSave();
+
+  save.createSave();
+  save.readSave();
+
+  l1 = new Level();
+  l1.init();
+  snow.init();
+  lifecounter =1;
+  encounter = new Encounter();
+  thePinguin.initial();
+  powerup.init();
+  score.init();
+
+
+  //spawnObstacle(x, y, w, h, spawnTime);
+  ship.spawnObstacle(width, height - shipHeight, shipWidth, shipHeight, shipSpawnTime, shipType); 
+  ice.spawnObstacle(width, 0 -(iceHeight/2), iceWidth, iceHeight, iceSpawnTime, iceType);  //0 - (iceHeight/2) will get the upper half of the ice obstacle stick out of the screen.
+
+  ship.init();
+  ice.init();
+
+  powerup.spawnPowerUp(width, (height/2), 10, 10, 1, (int)random(1, 4));///
+  for (index=0; index<bullets.length; index++) { 
+    bullets[index]= new Bullet(); //Display the bullets at the position where the character was when shooting
+    bullets[index].init();
+  }
+}
+
+//===============================================
+
+void keyPressed() {
+  switch(GameStateManager.gameStateVal) {
+  case 0: //menu
+  case 2: //help
+    {
+      menu.keyPressed();
+      break;
+    }
+  case 1: //play
+    {
+      tools.keyPressed();
+      thePinguin.keyPressed();
+      break;
+    }
+  case 4://score
+    {
+      score.keyPressed();
+      break;
+    }
+  }
+}
+
+void keyReleased() {
+  switch(GameStateManager.gameStateVal) {
+  case 1: //play
+    {
+      thePinguin.keyReleased();
+      break;
+    }
+  case 4://score
+    {
+      score.keyReleased();
+      break;
+    }
+  }
+}

@@ -1,0 +1,228 @@
+class Menu {
+  final int 
+    MAX_BUTTON_IMAGES = 2, 
+    LOWEST_SELECT_VALUE = 0, //The lowest value that the button select can go
+    HIGHEST_SELECT_VALUE = 1, //The highest value that the button select can go
+    SELECT_SPACING = 10, //Spacing of the button select with the button
+    image_size = 200;
+
+  final float spacing = 100;
+
+  PImage[] buttonImages = new PImage[MAX_BUTTON_IMAGES]; //Saving the button images here
+  PVector[] imagePos = new PVector[MAX_BUTTON_IMAGES]; //Saving the button coordinates here
+
+  PImage background, helpScreen;
+
+  float 
+    margin, 
+    selectX, //x position of the button select
+    selectY, //y position of the button select
+    pingX = 50, 
+    timer = 5, 
+    bgX, 
+    bgY, 
+    bgX2, 
+    bgY2, 
+    buttonMoveSpeed, 
+    titleXPos, 
+    titleYPos;
+
+  int 
+    buttonSelected, 
+    waterWidth, 
+    waterHeight;
+
+  boolean
+    disableKeyPress, 
+    sceneTransition;
+  //================================================================
+
+  void init() {
+
+    //setting background values and loading image.
+    waterWidth = width;
+    waterHeight = height;
+    bgX = 0;
+    bgX2 = waterWidth;
+
+    background = loadImage("./Sprites/water/Fullwater.png", "png");
+    background.resize(waterWidth, waterHeight);
+
+    loadMenuImages();
+  }
+
+  void update() {
+    background(0, 191, 255);
+    updateBackground(); //updating the background's position
+    drawBackground(); //drawing the background
+
+    switch(GameStateManager.gameStateVal) {
+    case 0:
+      {
+        showTitle();
+        selectButton();
+        showImages();
+        pingDraw();
+        break;
+      }
+    }
+  }
+  //===============background draw and update=====================
+
+  void drawBackground() {
+    image(background, bgX, bgY);
+    image(background, bgX2, bgY2);
+  }
+
+  void updateBackground() { 
+    bgX -= 5;
+    bgX2 -= 5;
+    if (bgX <= 0 - waterWidth) {
+      bgX = waterWidth;
+    }
+    if (bgX2 <= 0 - waterWidth) {
+      bgX2 = waterWidth;
+    }
+  }
+
+  //================================================================
+
+  void selectButton() {
+    switch(buttonSelected) { //defines the x and y position of the button select, highlighting/selecting the correct button.
+    case 0: //play button
+      {
+        selectX = imagePos[0].x;
+        selectY = imagePos[0].y;
+        break;
+      }
+    case 1: //exit button
+      {
+        selectX = imagePos[1].x;
+        selectY = imagePos[1].y;
+        break;
+      }
+    }
+    checkButtonValue();
+    fill(0, 255, 0); 
+    //Select border will still be drawn when the scene is not in transition.
+    if (!sceneTransition)rect(selectX - SELECT_SPACING, selectY - SELECT_SPACING, image_size + 20, image_size + 20);
+  }
+
+  //================================================================
+
+  void loadMenuImages() { //images of the buttons in the menu
+    buttonImages[0] = loadImage("./Sprites/menu/PlayButton.png");
+    buttonImages[1] = loadImage("./Sprites/menu/ExitButton.png");
+
+    //Initialize position of buttons
+    float left_spacing = 2.75;
+    float x_calculation, y_calculation;
+
+    margin = width/left_spacing; //margin from the left side of the screen to the position of the first image.
+    for (int i=0; i<MAX_BUTTON_IMAGES; i++) {
+      buttonImages[i].resize(image_size, image_size);
+
+      x_calculation = margin + ((image_size + spacing) * i);
+      y_calculation = height/2;
+
+      imagePos[i] = new PVector(x_calculation, y_calculation);
+    }
+  }
+
+  void showImages() { //Drawing the buttons on the screen
+    if (sceneTransition && buttonMoveSpeed < height) buttonMoveSpeed += 20;
+    for (int i=0; i<MAX_BUTTON_IMAGES; i++) {
+      image(buttonImages[i], imagePos[i].x, imagePos[i].y + buttonMoveSpeed);
+    }
+  }
+
+  void pingDraw() {
+    println("titleYPos: "+titleYPos);
+    println("buttonMoveSpeed: "+buttonMoveSpeed);
+    if (sceneTransition && titleYPos < 0 && buttonMoveSpeed >= height) {
+      if (pingX < width) {
+        pingX += 20;
+      } else {
+        GameStateManager.changeGameState(1);
+      }
+    }
+
+    image(pinguinSprite[pinguinFrame], pingX, height/3, thePinguin.playerWidth, thePinguin.playerHeight);
+    if (pinguinFrame == framesPinguin-1) {
+      pinguinFrame = 0;
+    } else {
+      pinguinFrame++;
+    }
+  }
+
+  //================================================================
+
+  void showTitle() { //TITLE TEXT NEEDS TO REPLACED WITH AN ACTUAL TITLE IMAGE
+    textSize(150);
+    fill(255);
+    textAlign(CENTER);
+
+    titleXPos = width/2; 
+    titleYPos = 150 + (buttonMoveSpeed *-1);
+    text("PING SWIMS", titleXPos, titleYPos);
+  }
+
+  //================================================================
+
+  void checkButtonValue() { //You cannot navigate further than the first or last button
+    if (buttonSelected < LOWEST_SELECT_VALUE) buttonSelected = LOWEST_SELECT_VALUE;
+    if (buttonSelected > HIGHEST_SELECT_VALUE) buttonSelected = HIGHEST_SELECT_VALUE;
+  }
+
+  //================================================================
+
+  void checkSelectedButton() {
+    switch(buttonSelected) {
+    case 0: //first button selected (play)
+      {
+        disableKeyPress = true;
+        sceneTransition = true;
+        break;
+      }
+    case 1: //second button selected (exit)
+      {
+        exit();
+        break;
+      }
+    }
+  }
+
+  //================================================================
+
+  void keyPressed() {
+    if (!disableKeyPress) {
+      switch(GameStateManager.gameStateVal) {
+      case 0:
+        {
+          switch(keyCode) {
+          case 65: //a
+          case LEFT:
+            {
+              buttonSelected --;
+              break;
+            }
+          case 68: //d
+          case RIGHT:
+            {
+              buttonSelected ++;
+              break;
+            }
+          case ' ':
+          case ENTER:
+            {
+              selectSound.play();
+              checkSelectedButton();
+              break;
+            }
+          }
+          break;
+        }
+      }
+    }
+  }
+}

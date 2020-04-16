@@ -1,0 +1,244 @@
+class Menu {
+  final int 
+    MAX_BUTTON_IMAGES = 2, 
+    LOWEST_SELECT_VALUE = 0, //The lowest value that the button select can go
+    HIGHEST_SELECT_VALUE = 2, //The highest value that the button select can go
+    SELECT_SPACING = 10; //Spacing of the button select with the button
+
+  PImage[] buttonImages = new PImage[MAX_BUTTON_IMAGES]; //Saving the button images here
+  float[] imageXPos = new float[MAX_BUTTON_IMAGES]; //Saving the x position of the button images
+  float[] imageYPos = new float[MAX_BUTTON_IMAGES]; //Saving the y position of the button images
+
+  PImage background, helpScreen;
+
+  float 
+    spacing, //Spacing between the buttons
+    margin, //margin between left-screen border and the first button
+    selectX, //x position of the button select
+    selectY, //y position of the button select
+    pingX, 
+    timer = 5, 
+    bgX, 
+    bgY, 
+    bgX2, 
+    bgY2;
+
+  int image_size, 
+    buttonSelected, 
+    waterWidth, 
+    waterHeight;
+
+  //================================================================
+
+  void init() {
+
+    waterWidth = width;
+    waterHeight = height;
+    bgX = 0;
+    bgX2 = waterWidth;
+
+    background = loadImage("./Sprites/water/Fullwater.png", "png");
+    background.resize(waterWidth, waterHeight);
+
+    helpScreen = loadImage("./Sprites/help/helpScreen.png", "png");
+    helpScreen.resize(width, height);
+
+    spacing = 100;
+    image_size = 200;
+
+
+    loadMenuImages();
+    showTitle();
+
+    for (int i = 0; i<framesPinguin; i++) {
+      pinguinSprite[i] = loadImage("./Images/Pinguin/pinguin-"+i+".png");
+    };
+  }
+
+  void update() {
+    background(0, 0, 122);
+    drawBackground();
+
+    updateBackground();
+
+    switch(gameState) {
+    case 0:
+      {
+        showTitle();
+        selectButton();
+        showImages();
+        
+        //==============================Ping moving through screen============================================
+
+        if (pingX < width) {
+          pingX += 5;
+        } else {
+          if (timer > 0) {
+            timer -= (float)1/60;
+            println("timer: "+timer);
+          } else {
+            pingX = -thePinguin.playerWidth;
+            timer = 5;
+          }
+        }
+
+        image(pinguinSprite[pinguinFrame], pingX, height/3, thePinguin.playerWidth, thePinguin.playerHeight);
+        if (pinguinFrame == framesPinguin-1) {
+          pinguinFrame = 0;
+        } else {
+          pinguinFrame++;
+        }
+
+        //====================================================================================================
+        break;
+      }
+    case 2:
+      {
+        image(helpScreen, 0, 0);
+        break;
+      }
+    }
+  }
+  //================================================================
+
+  void drawBackground() {
+    image(background, bgX, bgY);
+    image(background, bgX2, bgY2);
+  }
+
+  void updateBackground() {
+    bgX -= 5;
+    bgX2 -= 5;
+    if (bgX <= 0 - waterWidth) {
+      bgX = waterWidth;
+    }
+    if (bgX2 <= 0 - waterWidth) {
+      bgX2 = waterWidth;
+    }
+  }
+
+  //================================================================
+
+  void selectButton() {
+    checkButtonValue();
+    switch(buttonSelected) { //defines the x and y position of the button select, highlighting/selecting the correct button.
+    case 0: //play button
+      {
+        selectX = imageXPos[0];
+        selectY = imageYPos[0];
+        break;
+      }
+    case 1: //help button
+      {
+        selectX = imageXPos[1];
+        selectY = imageYPos[1];
+        break;
+      }
+    case 2: //exit button
+      {
+        selectX = imageXPos[2];
+        selectY = imageYPos[2];
+        break;
+      }
+    }
+    fill(0, 255, 0);
+    rect(selectX - SELECT_SPACING, selectY - SELECT_SPACING, image_size + 20, image_size + 20);
+  }
+
+  //================================================================
+
+  void loadMenuImages() {
+    buttonImages[0] = loadImage("./Sprites/menu/PlayButton.png");
+    buttonImages[1] = loadImage("./Sprites/menu/HelpButton.png");
+    buttonImages[2] = loadImage("./Sprites/menu/ExitButton.png");
+  }
+
+  void showImages() {
+    margin = width/3.5;
+    for (int i=0; i<MAX_BUTTON_IMAGES; i++) {
+      buttonImages[i].resize(image_size, image_size);
+      imageXPos[i] =  margin + ((image_size + spacing) * i);
+      imageYPos[i] = height/2;
+      image(buttonImages[i], imageXPos[i], imageYPos[i]);
+    }
+  }
+
+  //================================================================
+
+  void showTitle() {
+    textSize(150);
+    fill(255);
+    textAlign(CENTER);
+    text("PING SWIMS", width/2, 150);
+  }
+
+  //================================================================
+
+  void checkButtonValue() {
+    if (buttonSelected < LOWEST_SELECT_VALUE) buttonSelected = LOWEST_SELECT_VALUE;
+    if (buttonSelected > HIGHEST_SELECT_VALUE) buttonSelected = HIGHEST_SELECT_VALUE;
+  }
+
+  //================================================================
+
+  void checkSelectedButton() {
+    switch(buttonSelected) {
+    case 0:
+      {
+        gameState = 1;
+        changeGameState();
+        break;
+      }
+    case 1:
+      {
+        gameState = 2;
+        changeGameState();
+        break;
+      }
+    case 2:
+      {
+        exit();
+        break;
+      }
+    }
+  }
+
+  //================================================================
+
+  void keyPressed() {
+    switch(gameState) {
+    case 0:
+      {
+        switch(keyCode) {
+        case 65: //a
+        case LEFT:
+          {
+            buttonSelected --;
+            break;
+          }
+        case 68: //d
+        case RIGHT:
+          {
+            buttonSelected ++;
+            break;
+          }
+        case ' ':
+        case ENTER:
+          {
+            checkSelectedButton();
+            break;
+          }
+        }
+        break;
+      }
+    case 2:
+      {
+        if (keyCode == ENTER){
+          gameState = 0;
+          changeGameState();
+        }
+        break;
+      }
+    }
+  }
+}
